@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Blob JSON Demo</title>
+    <script type="application/javascript">
+
+        (function() {
+
+            function decodeBlobFromBase64(base64ImageString, imageName, filetype) {
+                var sliceSize = 1024;
+                var byteCharacters = atob(base64ImageString);
+                var bytesLength = byteCharacters.length;
+                var slicesCount = Math.ceil(bytesLength / sliceSize);
+                var byteArrays = new Array(slicesCount);
+
+                for (var sliceIndex = 0; sliceIndex < slicesCount; ++sliceIndex) {
+                    var begin = sliceIndex * sliceSize;
+                    var end = Math.min(begin + sliceSize, bytesLength);
+
+                    var bytes = new Array(end - begin);
+                    for (var offset = begin, i = 0; offset < end; ++i, ++offset) {
+                        bytes[i] = byteCharacters[offset].charCodeAt(0);
+                    }
+                    byteArrays[sliceIndex] = new Uint8Array(bytes);
+                }
+                var blob = new Blob(byteArrays, { type: filetype });
+                blob.lastModifiedDate = new Date();
+                blob.name = imageName;
+                return blob;
+            }
+
+            var request = new XMLHttpRequest();
+            request.open('GET', 'http://localhost:8080/v1/demo/image');
+            request.onreadystatechange = function() {
+                if (this.readyState === 4 && this.status === 200) {
+                    if(typeof this.response === 'string') {
+                        //for IE
+                        this.response = JSON.parse(this.response);
+                    }
+                    var loadedBlob = decodeBlobFromBase64(this.response['filedata'],
+                        this.response['filename'],
+                        this.response['filetype']);
+                    document.getElementById('displayer').src = URL.createObjectURL(loadedBlob);
+                }
+            };
+            request.responseType = 'json';
+            request.send()
+
+        })();
+
+    </script>
+</head>
+<body>
+
+<img id="displayer" alt="Image to Display Here"/>
+
+</body>
+</html>
